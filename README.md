@@ -12,7 +12,7 @@
 
 ---
 
-`ai-seo-audit` is a free, open-source web app that audits a page for **AI answer-engine readability** — the kind of optimization that gets you cited by ChatGPT, Claude, and Perplexity rather than ranked on Google. Paste a URL, get a 0–100 score across crawlability, content structure, schema, and trust signals, then copy a generated fix prompt straight into your coding agent.
+`ai-seo-audit` is a free, open-source web app that audits a page for **AI answer-engine readability** — the kind of optimization that gets you cited by ChatGPT, Claude, and Perplexity rather than ranked on Google. Paste a URL, get a 0–100 score across six categories (crawlability, content chunking, schema, E-E-A-T, off-site citations, and governance), then copy a generated fix prompt straight into your coding agent.
 
 > Sometimes called **GEO** (Generative Engine Optimization) or **AEO** (Answer Engine Optimization).
 
@@ -170,16 +170,22 @@ Response shape (abbreviated):
     "band": { "label": "Strong", "interpretation": "..." },
     "categories": [
       {
-        "id": "crawlability",
-        "name": "...",
-        "score": 18,
-        "maxScore": 20,
+        "id": "A",
+        "name": "Technical AI Crawlability",
+        "score": 18.3,
+        "maxScore": 28.4,
         "items": [
           /* per-rule */
         ],
       },
+      {
+        "id": "B",
+        "name": "Content Structure & Chunking",
+        "score": 21,
+        "maxScore": 25.4,
+      },
     ],
-    "topPriorities": ["A3: Add an llms.txt index ...", "..."],
+    "topPriorities": ["A11: Add a self-referencing canonical tag ...", "..."],
     "agentPrompts": { "full": "Paste this into your coding agent ..." },
   },
 }
