@@ -870,8 +870,28 @@ export const RULES: Rule[] = [
 // ---------------------------------------------------------------------------
 
 export function countWords(text: string): number {
-  const matches = text.match(/[A-Za-z0-9][A-Za-z0-9'-]*/g);
-  return matches ? matches.length : 0;
+  // Intl.Segmenter provides CJK-aware word segmentation.
+  // Falls back to Latin regex when unavailable (Node < 16, some edge runtimes).
+  if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
+    try {
+      const segmenter = new Intl.Segmenter(undefined, { granularity: "word" });
+      let count = 0;
+      for (const segment of segmenter.segment(text)) {
+        if (segment.isWordLike) count++;
+      }
+      return count;
+    } catch {
+      // Fall through to regex fallback.
+    }
+  }
+
+  // Fallback: Latin-script words + CJK characters (rough approximation).
+  const latin =
+    text.match(/[A-Za-z0-9À-ɏ][A-Za-z0-9À-ɏ'-]*/g) ?? [];
+  const cjk = text.match(
+    /[一-鿿㐀-䶿豈-﫿぀-ゟ゠-ヿ가-힯]/g,
+  );
+  return latin.length + (cjk?.length ?? 0);
 }
 
 export function countMatches(text: string, pattern: RegExp): number {

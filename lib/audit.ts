@@ -628,6 +628,9 @@ function decodeHtml(value: string): string {
 }
 
 function fleschKincaidGrade(text: string): number | null {
+  // Flesch-Kincaid is English-specific. Bail out for CJK-heavy text.
+  if (cjkRatio(text) > 0.35) return null;
+
   const words = text.match(/[A-Za-z][A-Za-z'-]*/g) ?? [];
   const sentences = text.match(/[.!?]+(?:\s|$)/g) ?? [];
   if (words.length < 80 || sentences.length < 3) return null;
@@ -637,6 +640,11 @@ function fleschKincaidGrade(text: string): number | null {
     11.8 * (syllables / words.length) -
     15.59
   );
+}
+
+function cjkRatio(text: string): number {
+  const cjk = text.match(/[一-鿿㐀-䶿豈-﫿぀-ゟ゠-ヿ가-힯]/g);
+  return Math.min(text.length, 1) ? (cjk?.length ?? 0) / Math.max(text.length, 1) : 0;
 }
 
 function countSyllables(word: string): number {
