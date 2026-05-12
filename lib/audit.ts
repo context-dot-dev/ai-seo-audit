@@ -71,7 +71,7 @@ export async function runAudit(
       headings: ctx.headings.length,
       links: ctx.links.length,
       externalLinks: ctx.externalLinks.length,
-      jsonLdBlocks: ctx.jsonLd.length,
+      jsonLdBlocks: ctx.jsonLdBlockCount,
     },
     categories,
     diagnostics: {
@@ -87,6 +87,7 @@ export async function runAudit(
           : ctx.html
             ? "ready"
             : "empty",
+      jsonLdParseFailures: ctx.jsonLdParseFailures,
     },
   };
 

@@ -58,6 +58,7 @@ export type AuditResult = {
   diagnostics: {
     contextDevMarkdown: "ready" | "empty" | "failed";
     contextDevHtml: "ready" | "empty" | "failed";
+    jsonLdParseFailures: number;
   };
 };
 

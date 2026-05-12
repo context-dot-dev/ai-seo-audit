@@ -347,6 +347,10 @@ export function AuditResultsView({
               label="Context.dev markdown"
               value={audit.diagnostics.contextDevMarkdown}
             />
+            <DiagnosticRow
+              label="JSON-LD parse failures"
+              value={audit.diagnostics.jsonLdParseFailures}
+            />
           </dl>
         </div>
       </section>
