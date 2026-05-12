@@ -3,6 +3,9 @@ import { createClient, type Client } from "@libsql/client";
 import type { AuditResult } from "@/lib/audit-types";
 import type { BrandInfo } from "@/lib/brand-types";
 
+/** Audit cache TTL: 7 days in milliseconds. */
+export const AUDIT_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+
 type CachedAuditRow = {
   audit: AuditResult;
   updatedAt: number;
@@ -68,9 +71,14 @@ export async function getCachedAudit(
     });
     const row = result.rows[0];
     if (!row) return null;
+    const updatedAt = Number(row.updated_at);
+    // Reject stale cache entries older than the TTL.
+    if (Date.now() - updatedAt > AUDIT_CACHE_TTL_MS) {
+      return null;
+    }
     return {
       audit: JSON.parse(row.value as string) as AuditResult,
-      updatedAt: Number(row.updated_at),
+      updatedAt,
     };
   } catch {
     return null;
