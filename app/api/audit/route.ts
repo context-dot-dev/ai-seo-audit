@@ -15,15 +15,20 @@ const CACHE_HEADERS = {
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
-  const domain = searchParams.get("domain") ?? "";
+  const rawUrl =
+    searchParams.get("url") ?? searchParams.get("domain") ?? "";
   const forceRefresh = searchParams.get("refresh") === "1";
-  return respond(domain, forceRefresh);
+  return respond(rawUrl, forceRefresh);
 }
 
 export async function POST(req: NextRequest) {
-  let body: { domain?: string; refresh?: boolean };
+  let body: { url?: string; domain?: string; refresh?: boolean };
   try {
-    body = (await req.json()) as { domain?: string; refresh?: boolean };
+    body = (await req.json()) as {
+      url?: string;
+      domain?: string;
+      refresh?: boolean;
+    };
   } catch {
     return NextResponse.json(
       {
@@ -33,11 +38,14 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  return respond(body.domain ?? "", body.refresh ?? false);
+  return respond(
+    body.url ?? body.domain ?? "",
+    body.refresh ?? false,
+  );
 }
 
-async function respond(domain: string, forceRefresh = false) {
-  const result = await performAudit(domain, forceRefresh);
+async function respond(rawUrl: string, forceRefresh = false) {
+  const result = await performAudit(rawUrl, forceRefresh);
 
   if (result.status === "ready") {
     const payload: AuditApiResponse = {

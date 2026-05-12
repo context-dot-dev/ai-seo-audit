@@ -5,13 +5,23 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2 } from "lucide-react";
 
-import { normalizeDomain } from "@/lib/url";
+import { normalizeAuditUrl } from "@/lib/url";
 
 const EXAMPLES = ["context.dev", "mintlify.com", "gumroad.com"];
 
 type AuditFormProps = {
   initialDomain?: string;
 };
+
+function extractDomainLabel(value: string): string {
+  const url = normalizeAuditUrl(value);
+  if (!url) return value;
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return value;
+  }
+}
 
 export function AuditForm({ initialDomain = "" }: AuditFormProps) {
   const [value, setValue] = useState(initialDomain);
@@ -22,18 +32,20 @@ export function AuditForm({ initialDomain = "" }: AuditFormProps) {
   function goToAudit(target: string) {
     const trimmed = target.trim();
     if (!trimmed) {
-      setError("Enter a domain to audit.");
+      setError("Enter a URL to audit.");
       return;
     }
 
-    const domain = normalizeDomain(trimmed);
-    if (!domain) {
-      setError("Enter a valid domain.");
+    const auditUrl = normalizeAuditUrl(trimmed);
+    if (!auditUrl) {
+      setError("Enter a valid URL.");
       return;
     }
 
     setError("");
-    const href = `/audit/${encodeURIComponent(domain)}`;
+    const domain = extractDomainLabel(auditUrl);
+    const query = `url=${encodeURIComponent(auditUrl)}`;
+    const href = `/audit/${encodeURIComponent(domain)}?${query}`;
     startTransition(() => {
       router.push(href as never);
     });
@@ -48,12 +60,12 @@ export function AuditForm({ initialDomain = "" }: AuditFormProps) {
     <div className="w-full">
       <form onSubmit={onSubmit} className="grid gap-3">
         <label className="font-mono text-xs uppercase tracking-[0.22em] text-muted">
-          ◢ paste domain
+          ◢ paste url
         </label>
         <div className="grid gap-0 border-b-2 border-ink/15 focus-within:border-teal sm:grid-cols-[1fr_auto] sm:items-stretch">
           <input
-            aria-label="Domain to audit"
-            name="domain"
+            aria-label="URL to audit"
+            name="url"
             type="text"
             inputMode="url"
             autoComplete="url"
