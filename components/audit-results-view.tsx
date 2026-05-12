@@ -55,6 +55,7 @@ export function AuditResultsView({
 }: AuditResultsViewProps) {
   const score = Math.round(audit.score);
   const percent = Math.max(0, Math.min(100, audit.score));
+  const [refreshing, setRefreshing] = useState(false);
 
   const promptsById = useMemo(() => {
     const map = new Map<string, string>();
@@ -83,6 +84,13 @@ export function AuditResultsView({
     [audit.categories],
   );
 
+  function reRunAudit() {
+    setRefreshing(true);
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set("refresh", "1");
+    window.location.href = currentUrl.toString();
+  }
+
   return (
     <main className="bg-canvas">
       {/* Top utility strip */}
@@ -102,6 +110,19 @@ export function AuditResultsView({
               <time dateTime={new Date(updatedAt).toISOString()}>
                 {formatTimestamp(updatedAt)}
               </time>
+            ) : null}
+            {cached ? (
+              <>
+                <span className="text-ink/40">·</span>
+                <button
+                  type="button"
+                  disabled={refreshing}
+                  onClick={reRunAudit}
+                  className="underline decoration-ink/20 decoration-1 underline-offset-4 transition hover:text-teal hover:decoration-teal disabled:opacity-50"
+                >
+                  {refreshing ? "refreshing..." : "re-run audit"}
+                </button>
+              </>
             ) : null}
           </div>
         </div>
