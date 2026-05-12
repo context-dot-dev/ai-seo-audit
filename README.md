@@ -12,7 +12,7 @@
 
 ---
 
-`ai-seo-audit` is a free, open-source web app that audits a page for **AI answer-engine readability** — the kind of optimization that gets you cited by ChatGPT, Claude, and Perplexity rather than ranked on Google. Paste a URL, get a 0–100 score across crawlability, content structure, schema, and trust signals, then copy a generated fix prompt straight into your coding agent.
+`ai-seo-audit` is a free, open-source web app that audits a page for **AI answer-engine readability** — the kind of optimization that gets you cited by ChatGPT, Claude, and Perplexity rather than ranked on Google. Paste a URL, get a 0–100 score across six categories (crawlability, content chunking, schema, E-E-A-T, off-site citations, and governance), then copy a generated fix prompt straight into your coding agent.
 
 > Sometimes called **GEO** (Generative Engine Optimization) or **AEO** (Answer Engine Optimization).
 
@@ -24,10 +24,12 @@ Paste a URL → get a score in ~30 seconds → copy the fix prompt into Claude C
 ┌──────────────────────────────────────────────────┐
 │  https://example.com/post                        │  →  Score: 72 / 100  (Strong)
 └──────────────────────────────────────────────────┘
-   ├─ Crawlability ............ 18 / 20
-   ├─ Content structure ...... 21 / 30
-   ├─ Schema & structured data  14 / 25
-   └─ Trust & authority ....... 19 / 25
+   ├─ A. Technical AI Crawlability ..... 18.0 / 28.4
+   ├─ B. Content Structure & Chunking .. 21.0 / 25.4
+   ├─ C. Structured Data / Schema ...... 13.4 / 13.4
+   ├─ D. E-E-A-T & Entity Authority ... 13.0 / 21.4
+   ├─ E. Off-site / Citation Surface ... 3.6 / 8.4
+   └─ F. Measurement & Governance ...... 3.0 / 3.0
 ```
 
 ## Features
@@ -169,16 +171,22 @@ Response shape (abbreviated):
     "band": { "label": "Strong", "interpretation": "..." },
     "categories": [
       {
-        "id": "crawlability",
-        "name": "...",
-        "score": 18,
-        "maxScore": 20,
+        "id": "A",
+        "name": "Technical AI Crawlability",
+        "score": 18.3,
+        "maxScore": 28.4,
         "items": [
           /* per-rule */
         ],
       },
+      {
+        "id": "B",
+        "name": "Content Structure & Chunking",
+        "score": 21,
+        "maxScore": 25.4,
+      },
     ],
-    "topPriorities": ["A3: Add an llms.txt index ...", "..."],
+    "topPriorities": ["A11: Add a self-referencing canonical tag ...", "..."],
     "agentPrompts": { "full": "Paste this into your coding agent ..." },
   },
 }
