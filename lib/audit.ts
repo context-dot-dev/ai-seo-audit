@@ -37,7 +37,7 @@ const STATUS_VALUE: Record<AuditStatus, number> = {
   pass: 1,
   partial: 0.5,
   fail: 0,
-  na: 1,
+  na: 0, // N/A rules do not contribute to the score.
 };
 
 export async function runAudit(
@@ -202,13 +202,27 @@ function scoreCategory(category: CategoryDef, ctx: RuleContext): AuditCategory {
   const rules = RULES.filter((rule) => rule.categoryId === category.id);
   const evaluated = rules.map((rule) => ({ rule, result: rule.evaluate(ctx) }));
 
-  const denominator = evaluated.reduce(
+  // Denominator only includes applicable (non-N/A) rules so N/A items
+  // don't inflate scores by getting full credit or shrinking weights.
+  const applicable = evaluated.filter(({ result }) => result.status !== "na");
+  const denominator = applicable.reduce(
     (sum, { rule }) => sum + (rule.multiplier ?? 1),
     0,
   );
 
   const items: AuditItem[] = evaluated
     .map(({ rule, result }) => {
+      if (result.status === "na") {
+        return {
+          id: rule.id,
+          label: rule.label,
+          status: result.status,
+          evidence: result.evidence,
+          recommendation: rule.recommendation,
+          maxScore: 0,
+          score: 0,
+        };
+      }
       const participates = denominator > 0;
       const itemMax = participates
         ? (category.maxScore * (rule.multiplier ?? 1)) / denominator
@@ -231,6 +245,7 @@ function scoreCategory(category: CategoryDef, ctx: RuleContext): AuditCategory {
     description: category.description,
     score: round1(items.reduce((sum, item) => sum + item.score, 0)),
     maxScore: category.maxScore,
+    naExcluded: evaluated.length - applicable.length,
     items,
   };
 }

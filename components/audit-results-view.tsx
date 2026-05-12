@@ -201,10 +201,13 @@ export function AuditResultsView({
                 aria-hidden
               />
             </div>
-            <dl className="mt-6 grid grid-cols-3 gap-2 font-mono lg:justify-end">
+            <dl className="mt-6 grid grid-cols-4 gap-2 font-mono lg:justify-end">
               <CountChip label="pass" value={counts.pass} tone="green" />
               <CountChip label="partial" value={counts.partial} tone="amber" />
               <CountChip label="fail" value={counts.fail} tone="red" />
+              {counts.na > 0 ? (
+                <CountChip label="n/a" value={counts.na} tone="muted" />
+              ) : null}
             </dl>
           </div>
         </div>
@@ -376,10 +379,13 @@ function CategorySection({
             <div className="h-full bg-teal" style={{ width: `${percent}%` }} />
           </div>
 
-          <dl className="mt-5 grid grid-cols-3 gap-2 font-mono">
+          <dl className="mt-5 grid grid-cols-4 gap-2 font-mono">
             <CountChip label="pass" value={counts.pass} tone="green" />
             <CountChip label="partial" value={counts.partial} tone="amber" />
             <CountChip label="fail" value={counts.fail} tone="red" />
+            {category.naExcluded > 0 ? (
+              <CountChip label="n/a" value={category.naExcluded} tone="muted" />
+            ) : null}
           </dl>
         </header>
 
