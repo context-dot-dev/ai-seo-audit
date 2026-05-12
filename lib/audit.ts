@@ -343,8 +343,17 @@ function detectNoIndex(html: string): boolean {
 }
 
 function getAttr(tag: string, attr: string): string | null {
-  const match = tag.match(new RegExp(`${attr}\\s*=\\s*["']([^"']+)["']`, "i"));
-  return match ? decodeHtml(match[1]) : null;
+  // Require attribute boundary (^ or whitespace) before the name so that e.g.
+  // `href` does NOT match `data-href`. Supports double-quoted, single-quoted,
+  // and unquoted attribute values.
+  const escaped = attr.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `(?:^|\\s)${escaped}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`,
+    "i",
+  );
+  const match = tag.match(pattern);
+  if (!match) return null;
+  return decodeHtml(match[1] ?? match[2] ?? match[3] ?? "");
 }
 
 function extractLinks(
