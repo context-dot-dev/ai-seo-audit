@@ -24,16 +24,17 @@ Paste a URL → get a score in ~30 seconds → copy the fix prompt into Claude C
 ┌──────────────────────────────────────────────────┐
 │  https://example.com/post                        │  →  Score: 72 / 100  (Strong)
 └──────────────────────────────────────────────────┘
-   ├─ Crawlability ............ 18 / 20
-   ├─ Content structure ...... 21 / 30
-   ├─ Schema & structured data  14 / 25
-   └─ Trust & authority ....... 19 / 25
+   ├─ A. Technical AI Crawlability ..... 18.0 / 28.4
+   ├─ B. Content Structure & Chunking .. 21.0 / 25.4
+   ├─ C. Structured Data / Schema ...... 13.4 / 13.4
+   ├─ D. E-E-A-T & Entity Authority ... 13.0 / 21.4
+   ├─ E. Off-site / Citation Surface ... 3.6 / 8.4
+   └─ F. Measurement & Governance ...... 3.0 / 3.0
 ```
 
 ## Features
 
 - **30+ AI-readability checks** across crawlability, content chunking, schema markup, and trust signals.
-- **Major AI crawlers covered**: GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-User, Claude-SearchBot, PerplexityBot, Google-Extended, Applebot-Extended.
 - **Agent-ready fix prompt** — generated per audit, paste into Claude Code / Cursor / Aider to implement the fixes.
 - **JSON API** at `/api/audit?domain=...` for CI pipelines and dashboards.
 - **Edge-cached results** via optional Turso (libSQL) — repeat audits are instant.

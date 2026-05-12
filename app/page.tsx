@@ -42,15 +42,15 @@ const faqSchema = {
       name: "How is AI SEO different from traditional SEO?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Traditional SEO targets ranking algorithms in Google search results, while AI SEO (sometimes called GEO or AEO) targets the retrieval and citation behavior of large language models. AI SEO emphasizes clean Markdown extraction, well-chunked content, robots.txt access for AI crawlers like GPTBot and ClaudeBot, and explicit schema that LLMs can ground answers in.",
+        text: "Traditional SEO targets ranking algorithms in Google search results, while AI SEO (sometimes called GEO or AEO) targets the retrieval and citation behavior of large language models. AI SEO emphasizes clean Markdown extraction, well-chunked content, server-rendered HTML, and explicit schema that LLMs can ground answers in.",
       },
     },
     {
       "@type": "Question",
-      name: "Which AI crawlers does this audit check?",
+      name: "Which AI-readability signals does this audit check?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "The audit checks robots.txt and headers for major AI user agents including GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-User, Claude-SearchBot, PerplexityBot, Google-Extended, and Applebot-Extended.",
+        text: "The audit analyzes the rendered HTML and Markdown of your page for AI-readability signals: HTTPS, canonical tags, noindex directives, heading hierarchy, paragraph chunking, JSON-LD structured data (Organization, Article, FAQPage, Person), E-E-A-T trust signals, and external citation presence. A dedicated crawler-access check for specific AI bot user agents is on the roadmap.",
       },
     },
     {
@@ -66,7 +66,7 @@ const faqSchema = {
       name: "How long does an audit take?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Most audits complete in roughly 30 seconds. The tool fetches your Markdown, raw HTML, robots.txt, and sitemap, then scores 30+ checks across crawlability, content, schema, and trust signals.",
+        text: "Most audits complete in roughly 30 seconds. The tool fetches your Markdown and raw HTML via context.dev, then scores 30+ checks across crawlability, content, schema, and trust signals.",
       },
     },
   ],
