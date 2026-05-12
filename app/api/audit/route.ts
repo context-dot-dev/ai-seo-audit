@@ -14,13 +14,14 @@ const CACHE_HEADERS = {
 };
 
 export async function GET(req: NextRequest) {
-  return respond(req.nextUrl.searchParams.get("domain") ?? "");
+  const sp = req.nextUrl.searchParams;
+  return respond(sp.get("domain") ?? "", sp.get("refresh") === "true" || sp.get("refresh") === "1");
 }
 
 export async function POST(req: NextRequest) {
-  let body: { domain?: string };
+  let body: { domain?: string; refresh?: boolean };
   try {
-    body = (await req.json()) as { domain?: string };
+    body = (await req.json()) as { domain?: string; refresh?: boolean };
   } catch {
     return NextResponse.json(
       {
@@ -30,11 +31,11 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  return respond(body.domain ?? "");
+  return respond(body.domain ?? "", body.refresh ?? false);
 }
 
-async function respond(domain: string) {
-  const result = await performAudit(domain);
+async function respond(domain: string, refresh: boolean) {
+  const result = await performAudit(domain, { refresh });
 
   if (result.status === "ready") {
     const payload: AuditApiResponse = {

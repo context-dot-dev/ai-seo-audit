@@ -14,6 +14,7 @@ const siteUrl =
 
 type PageProps = {
   params: Promise<{ domain: string }>;
+  searchParams: Promise<{ refresh?: string }>;
 };
 
 function decodeDomain(raw: string): string {
@@ -60,13 +61,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function AuditPage({ params }: PageProps) {
+export default async function AuditPage({ params, searchParams }: PageProps) {
   const { domain } = await params;
+  const sp = await searchParams;
+  const refresh = sp.refresh === "true" || sp.refresh === "1";
   const decoded = decodeDomain(domain);
 
   const apiKey = process.env.CONTEXT_DEV_API_KEY;
   const [result, brandResult] = await Promise.all([
-    performAudit(decoded),
+    performAudit(decoded, { refresh }),
     apiKey
       ? fetchBrand(decoded, apiKey)
       : Promise.resolve({ brand: null, cached: false }),

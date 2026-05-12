@@ -19,7 +19,11 @@ export type PerformAuditResult =
 
 export const INVALID_DOMAIN_MESSAGE = "Enter a valid domain.";
 
-export async function performAudit(rawDomain: string): Promise<PerformAuditResult> {
+export async function performAudit(
+  rawDomain: string,
+  opts?: { refresh?: boolean },
+): Promise<PerformAuditResult> {
+  const refresh = opts?.refresh ?? false;
   const domain = normalizeDomain(rawDomain);
   if (!domain) {
     return {
@@ -44,15 +48,17 @@ export async function performAudit(rawDomain: string): Promise<PerformAuditResul
   const cacheKey = createHash("sha256")
     .update(`${CACHE_SCHEMA_VERSION}:${domain}`)
     .digest("hex");
-  const cached = await getCachedAudit(cacheKey);
-  if (cached) {
-    return {
-      status: "ready",
-      audit: ensureAgentPrompts(cached.audit),
-      cached: true,
-      updatedAt: cached.updatedAt,
-      domain,
-    };
+  if (!refresh) {
+    const cached = await getCachedAudit(cacheKey);
+    if (cached) {
+      return {
+        status: "ready",
+        audit: ensureAgentPrompts(cached.audit),
+        cached: true,
+        updatedAt: cached.updatedAt,
+        domain,
+      };
+    }
   }
 
   try {

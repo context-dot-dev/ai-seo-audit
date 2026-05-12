@@ -12,6 +12,7 @@ import {
   Copy,
   ExternalLink,
   MinusCircle,
+  RefreshCw,
   XCircle,
 } from "lucide-react";
 
@@ -102,6 +103,18 @@ export function AuditResultsView({
               <time dateTime={new Date(updatedAt).toISOString()}>
                 {formatTimestamp(updatedAt)}
               </time>
+            ) : null}
+            {cached ? (
+              <>
+                <span className="text-ink/40">·</span>
+                <a
+                  href={`/audit/${encodeURIComponent(audit.host)}?refresh=true`}
+                  className="inline-flex items-center gap-1.5 text-teal transition hover:text-ink"
+                >
+                  <RefreshCw className="size-3" />
+                  re-audit
+                </a>
+              </>
             ) : null}
           </div>
         </div>
