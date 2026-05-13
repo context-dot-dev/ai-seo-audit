@@ -14,7 +14,7 @@ const siteUrl =
 
 type PageProps = {
   params: Promise<{ domain: string }>;
-  searchParams: Promise<{ refresh?: string }>;
+  searchParams: Promise<{ refresh?: string; url?: string }>;
 };
 
 function decodeDomain(raw: string): string {
@@ -25,8 +25,20 @@ function decodeDomain(raw: string): string {
   }
 }
 
+function resolveAuditUrl(domainParam: string, urlParam?: string): string {
+  if (urlParam) {
+    try {
+      return decodeURIComponent(urlParam);
+    } catch {
+      // fall through
+    }
+  }
+  return `https://${domainParam}/`;
+}
+
 export async function generateMetadata({
   params,
+  searchParams,
 }: PageProps): Promise<Metadata> {
   const { domain } = await params;
   const decoded = decodeDomain(domain);
@@ -63,13 +75,14 @@ export async function generateMetadata({
 
 export default async function AuditPage({ params, searchParams }: PageProps) {
   const { domain } = await params;
+  const { url: urlParam, refresh } = await searchParams;
   const decoded = decodeDomain(domain);
-  const { refresh } = await searchParams;
   const forceRefresh = refresh === "1";
+  const auditTarget = resolveAuditUrl(decoded, urlParam);
 
   const apiKey = process.env.CONTEXT_DEV_API_KEY;
   const [result, brandResult] = await Promise.all([
-    performAudit(decoded, forceRefresh),
+    performAudit(auditTarget, forceRefresh),
     apiKey
       ? fetchBrand(decoded, apiKey)
       : Promise.resolve({ brand: null, cached: false }),

@@ -4,7 +4,7 @@ import { buildAgentFixPrompts } from "@/lib/agent-fix-prompt";
 import { runAudit } from "@/lib/audit";
 import type { AuditResult } from "@/lib/audit-types";
 import { getCachedAudit, setCachedAudit } from "@/lib/turso";
-import { auditUrlFromDomain, normalizeDomain } from "@/lib/url";
+import { displayHost, normalizeAuditUrl } from "@/lib/url";
 
 export type PerformAuditResult =
   | {
@@ -17,14 +17,14 @@ export type PerformAuditResult =
   | { status: "error"; message: string }
   | { status: "missing-env"; message: string; missing: string[] };
 
-export const INVALID_DOMAIN_MESSAGE = "Enter a valid domain.";
+export const INVALID_DOMAIN_MESSAGE = "Enter a valid URL.";
 
 export async function performAudit(
-  rawDomain: string,
+  rawUrl: string,
   forceRefresh = false,
 ): Promise<PerformAuditResult> {
-  const domain = normalizeDomain(rawDomain);
-  if (!domain) {
+  const url = normalizeAuditUrl(rawUrl);
+  if (!url) {
     return {
       status: "error",
       message: INVALID_DOMAIN_MESSAGE,
@@ -40,12 +40,12 @@ export async function performAudit(
     };
   }
 
-  const url = auditUrlFromDomain(domain);
+  const domain = displayHost(url);
 
   // Bump when AuditResult shape changes so stale blobs are not served.
   const CACHE_SCHEMA_VERSION = "v13";
   const cacheKey = createHash("sha256")
-    .update(`${CACHE_SCHEMA_VERSION}:${domain}`)
+    .update(`${CACHE_SCHEMA_VERSION}:${url}`)
     .digest("hex");
 
   if (!forceRefresh) {
@@ -77,6 +77,6 @@ function ensureAgentPrompts(audit: AuditResult): AuditResult {
   if (audit.agentPrompts?.full) return audit;
   return {
     ...audit,
-    agentPrompts: buildAgentFixPrompts(audit as Omit<AuditResult, "agentPrompts">),
+    agentPrompts: buildAgentPrompts(audit as Omit<AuditResult, "agentPrompts">),
   };
 }
