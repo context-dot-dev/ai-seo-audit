@@ -31,6 +31,12 @@ import {
   type RuleContext,
   type SchemaSummary,
 } from "@/lib/rules";
+import {
+  countCJKChars,
+  detectLanguage,
+  getPatterns,
+  type Language,
+} from "@/lib/i18n-patterns";
 import { displayHost } from "@/lib/url";
 
 const STATUS_VALUE: Record<AuditStatus, number> = {
@@ -121,6 +127,7 @@ async function buildContext(
 
   const htmlText = htmlToText(html);
   const analysisText = normalizeWhitespace(markdown || htmlText);
+  const detectedLanguage = detectLanguage(analysisText);
   const title = extractTitle(html) ?? firstMarkdownHeading(markdown);
   const description = extractMetaContent(html, "description");
   const links = extractLinks(html, markdown, normalizedUrl);
@@ -150,11 +157,11 @@ async function buildContext(
   const htmlWords = countWords(htmlText);
   const dataPoints = countDataPoints(analysisText);
   const grade = fleschKincaidGrade(analysisText);
-  const dateSignals = extractDateSignals(html, analysisText, jsonLd);
+  const dateSignals = extractDateSignals(html, analysisText, jsonLd, detectedLanguage);
   const canonical = extractCanonical(html);
   const hasNoIndex = detectNoIndex(html);
-  const faqStatus = computeFaqStatus(analysisText, headings);
-  const hasByline = detectByline(analysisText, schema);
+  const faqStatus = computeFaqStatus(analysisText, headings, detectedLanguage);
+  const hasByline = detectByline(analysisText, schema, detectedLanguage);
 
   return {
     url,
@@ -185,6 +192,7 @@ async function buildContext(
     dateSignals,
     faqStatus,
     hasByline,
+    detectedLanguage,
     markdownStatus: markdownSettled.status,
     htmlStatus: htmlSettled.status,
   };
@@ -558,20 +566,32 @@ function extractDateSignals(
   html: string,
   text: string,
   schemas: JsonObject[],
+  language: Language,
 ): DateSignals {
   const hasSchemaModified = schemas.some((s) => !!s.dateModified);
   const hasTimeTag = /<time\b[^>]*(datetime=|>)/i.test(html);
+
+  const langPatterns = getPatterns(language);
   const hasVisibleModified =
-    /\b(updated|last updated|modified|last modified)\b.{0,40}\b(?:19|20)\d{2}\b/i.test(
+    /\b(updated|last updated|modified|last modified|revised)\b.{0,40}\b(?:19|20)\d{2}\b/i.test(
+      text,
+    ) || langPatterns.visibleModifiedPattern.test(text);
+
+  const hasEnglishDate =
+    /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+(?:19|20)\d{2}\b/i.test(
       text,
     );
+  const hasIsoDate = /\b(?:19|20)\d{2}-\d{2}-\d{2}\b/.test(text);
+  const hasLocaleDate = langPatterns.datePattern
+    ? langPatterns.datePattern.test(text)
+    : false;
+
   const hasAnyDate =
     hasSchemaModified ||
     hasTimeTag ||
-    /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+(?:19|20)\d{2}\b/i.test(
-      text,
-    ) ||
-    /\b(?:19|20)\d{2}-\d{2}-\d{2}\b/.test(text);
+    hasEnglishDate ||
+    hasIsoDate ||
+    hasLocaleDate;
 
   return {
     hasAnyDate,
@@ -580,25 +600,44 @@ function extractDateSignals(
   };
 }
 
-function computeFaqStatus(text: string, headings: Heading[]): AuditStatus {
-  const questionHeadings = headings.filter((h) => h.text.includes("?"));
+function computeFaqStatus(
+  text: string,
+  headings: Heading[],
+  language: Language,
+): AuditStatus {
+  const langPatterns = getPatterns(language);
+  const questionHeadings = headings.filter(
+    (h) => h.text.includes("?") || langPatterns.questionMark.test(h.text),
+  );
   if (
-    /\b(faq|frequently asked questions|questions and answers)\b/i.test(text)
+    /\b(faq|frequently asked questions|questions and answers)\b/i.test(text) ||
+    langPatterns.faqKeywords.test(text)
   ) {
     return "pass";
   }
   if (questionHeadings.length >= 2) return "pass";
-  if (questionHeadings.length === 1 || countMatches(text, /\?/g) >= 2) {
+  const qmCount =
+    countMatches(text, /\?/g) + countMatches(text, langPatterns.questionMark);
+  if (questionHeadings.length === 1 || qmCount >= 2) {
     return "partial";
   }
   return "fail";
 }
 
-function detectByline(text: string, schema: SchemaSummary): boolean {
+function detectByline(
+  text: string,
+  schema: SchemaSummary,
+  language: Language,
+): boolean {
   if (schema.hasPerson || schema.hasAuthor) return true;
-  return /\b(by|written by|reviewed by|edited by)\s+[A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,3}\b/.test(
-    text,
-  );
+  if (
+    /\b(by|written by|reviewed by|edited by)\s+[A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,3}\b/.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+  return getPatterns(language).bylinePattern.test(text);
 }
 
 function htmlToText(html: string): string {
@@ -630,6 +669,11 @@ function decodeHtml(value: string): string {
 function fleschKincaidGrade(text: string): number | null {
   const words = text.match(/[A-Za-z][A-Za-z'-]*/g) ?? [];
   const sentences = text.match(/[.!?]+(?:\s|$)/g) ?? [];
+
+  // Flesch-Kincaid is English-only; skip when CJK dominates.
+  const cjkChars = countCJKChars(text);
+  if (cjkChars > words.length) return null;
+
   if (words.length < 80 || sentences.length < 3) return null;
   const syllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
   return (

@@ -13,6 +13,7 @@
  * Everything downstream (scoring, agent prompts, UI) derives from this file.
  */
 import type { AuditStatus } from "@/lib/audit-types";
+import { countCJKChars, getPatterns, type Language } from "@/lib/i18n-patterns";
 
 export type RuleDependency =
   | "url"
@@ -30,7 +31,8 @@ export type RuleDependency =
   | "paragraphs"
   | "data-points"
   | "date-signals"
-  | "readability";
+  | "readability"
+  | "language";
 
 export type SchemaSummary = {
   hasOrganization: boolean;
@@ -99,6 +101,9 @@ export type RuleContext = {
   faqStatus: AuditStatus;
   /** Precomputed byline presence, shared by C4, D1, etc. */
   hasByline: boolean;
+
+  /** Detected dominant language of the page content. */
+  detectedLanguage: Language;
 };
 
 export type RuleEvaluation = {
@@ -268,10 +273,8 @@ export const RULES: Rule[] = [
         const namesEntity = tokens.some((t) =>
           new RegExp(`\\b${escapeRegExp(t)}\\b`, "i").test(first),
         );
-        const answerPattern =
-          /\b(is|are|helps|provides|offers|refers to|means|enables|builds|delivers)\b/i.test(
-            first,
-          );
+        const langPatterns = getPatterns(ctx.detectedLanguage);
+        const answerPattern = langPatterns.blufVerbs.test(first);
         if (w >= 20 && w <= 90 && namesEntity && answerPattern) status = "pass";
         else if (w >= 12 && w <= 130 && (namesEntity || answerPattern))
           status = "partial";
@@ -354,10 +357,19 @@ export const RULES: Rule[] = [
     recommendation:
       "Add a concise FAQ section for common prompt-style questions, especially on commercial and informational pages.",
     dependencies: ["text", "headings"],
-    evaluate: (ctx) => ({
-      status: ctx.faqStatus,
-      evidence: `${countMatches(ctx.analysisText, /\?/g)} question mark(s) and ${ctx.headings.filter((h) => h.text.includes("?")).length} question-style heading(s) detected.`,
-    }),
+    evaluate: (ctx) => {
+      const langPatterns = getPatterns(ctx.detectedLanguage);
+      const qmCount =
+        countMatches(ctx.analysisText, /\?/g) +
+        countMatches(ctx.analysisText, langPatterns.questionMark);
+      const qHeadings = ctx.headings.filter(
+        (h) => h.text.includes("?") || langPatterns.questionMark.test(h.text),
+      );
+      return {
+        status: ctx.faqStatus,
+        evidence: `${qmCount} question mark(s) and ${qHeadings.length} question-style heading(s) detected.`,
+      };
+    },
   },
   {
     id: "B6",
@@ -381,16 +393,19 @@ export const RULES: Rule[] = [
     dependencies: ["markdown", "text"],
     evaluate: (ctx) => {
       const blockquote = /(^|\n)\s*>/.test(ctx.markdown);
-      const accordingTo = /\baccording to\b/i.test(ctx.analysisText);
+      const langPatterns = getPatterns(ctx.detectedLanguage);
+      const attribution =
+        /\baccording to\b/i.test(ctx.analysisText) ||
+        langPatterns.sourceAttribution.test(ctx.analysisText);
       const inlineQuote = /"[^"]{20,}"/.test(ctx.analysisText);
       const status: AuditStatus =
-        blockquote || accordingTo ? "pass" : inlineQuote ? "partial" : "fail";
+        blockquote || attribution ? "pass" : inlineQuote ? "partial" : "fail";
       return {
         status,
         evidence: blockquote
           ? "Markdown blockquote syntax was found."
-          : accordingTo
-            ? 'The phrase "according to" was found.'
+          : attribution
+            ? "A source-attribution phrase was found."
             : "No obvious quotation or source-attribution pattern was found.",
       };
     },
@@ -420,10 +435,11 @@ export const RULES: Rule[] = [
       'Use patterns like "X is defined as..." or "X refers to..." for core concepts.',
     dependencies: ["text"],
     evaluate: (ctx) => {
+      const langPatterns = getPatterns(ctx.detectedLanguage);
       const found =
         /\b(is defined as|are defined as|refers to|means|is a|is an)\b/i.test(
           ctx.analysisText,
-        );
+        ) || langPatterns.definitional.test(ctx.analysisText);
       return {
         status: found ? "pass" : "fail",
         evidence: found
@@ -686,10 +702,11 @@ export const RULES: Rule[] = [
     dependencies: ["text", "data-points"],
     multiplier: 1 / 3,
     evaluate: (ctx) => {
+      const langPatterns = getPatterns(ctx.detectedLanguage);
       const found =
         /\b(original research|study|survey|benchmark|dataset|methodology|proprietary data|we analyzed|we measured)\b/i.test(
           ctx.analysisText,
-        );
+        ) || langPatterns.researchLanguage.test(ctx.analysisText);
       const status: AuditStatus = found
         ? "pass"
         : ctx.dataPoints >= 3
@@ -870,8 +887,10 @@ export const RULES: Rule[] = [
 // ---------------------------------------------------------------------------
 
 export function countWords(text: string): number {
-  const matches = text.match(/[A-Za-z0-9][A-Za-z0-9'-]*/g);
-  return matches ? matches.length : 0;
+  const latinMatches = text.match(/[A-Za-z0-9][A-Za-z0-9'-]*/g);
+  const latinCount = latinMatches ? latinMatches.length : 0;
+  const cjkCount = countCJKChars(text);
+  return latinCount + cjkCount;
 }
 
 export function countMatches(text: string, pattern: RegExp): number {
@@ -923,8 +942,11 @@ function isCommercialOfferingLike(ctx: RuleContext): boolean {
   ) {
     return true;
   }
-  return /\b(pricing|free trial|start free|sign up|signup|sign-up|get started|request a demo|schedule a demo|book a demo|buy now|add to cart|subscribe|per (?:month|user|seat)|saas|platform|software)\b/i.test(
-    ctx.analysisText,
+  return (
+    /\b(pricing|free trial|start free|sign up|signup|sign-up|get started|request a demo|schedule a demo|book a demo|buy now|add to cart|subscribe|per (?:month|user|seat)|saas|platform|software)\b/i.test(
+      ctx.analysisText,
+    ) ||
+    getPatterns(ctx.detectedLanguage).commercialKeywords.test(ctx.analysisText)
   );
 }
 
@@ -945,8 +967,11 @@ function isTechnicalProductLike(ctx: RuleContext): boolean {
   if (/\/(docs?|api|sdk|reference|developers?)(\/|$)/i.test(ctx.url.pathname)) {
     return true;
   }
-  return /\b(api|sdk|cli|library|framework|open[- ]source|developer (?:portal|docs|guide)|npm install|pip install|brew install|github\.com\/[^\s]+)\b/i.test(
-    ctx.analysisText,
+  return (
+    /\b(api|sdk|cli|library|framework|open[- ]source|developer (?:portal|docs|guide)|npm install|pip install|brew install|github\.com\/[^\s]+)\b/i.test(
+      ctx.analysisText,
+    ) ||
+    getPatterns(ctx.detectedLanguage).technicalKeywords.test(ctx.analysisText)
   );
 }
 
