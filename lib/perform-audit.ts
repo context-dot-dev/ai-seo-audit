@@ -77,6 +77,8 @@ function ensureAgentPrompts(audit: AuditResult): AuditResult {
   if (audit.agentPrompts?.full) return audit;
   return {
     ...audit,
-    agentPrompts: buildAgentPrompts(audit as Omit<AuditResult, "agentPrompts">),
+    agentPrompts: buildAgentFixPrompts(
+      audit as Omit<AuditResult, "agentPrompts">,
+    ),
   };
 }
