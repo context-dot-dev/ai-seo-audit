@@ -168,12 +168,12 @@ export default function RootLayout({
       <head>
         <Script
           defer
-          src="https://plausible.io/js/pa-Of2CCb92I-O9hGQXQRgxw.js"
+          src="https://cdn.databuddy.cc/databuddy.js"
+          data-client-id="99c6646d-c49c-4db9-8ecd-8da671d5e6f9"
+          data-track-outgoing-links="true"
+          crossOrigin="anonymous"
           strategy="afterInteractive"
         />
-        <Script id="plausible-init" strategy="afterInteractive">
-          {`window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()`}
-        </Script>
       </head>
       <body className="font-sans">
         <script
